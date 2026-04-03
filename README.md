@@ -1,70 +1,100 @@
-# Getting Started with Create React App
+# ⚽ Football Scout AI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A natural language interface for scouting and querying FIFA 24 player data — powered by a hybrid RAG + Pandas query engine and Llama 3.3 70B.
 
-## Available Scripts
+![Stack](https://img.shields.io/badge/LLM-Llama%203.3%2070B-blue) ![Stack](https://img.shields.io/badge/Vector%20DB-ChromaDB-green) ![Stack](https://img.shields.io/badge/Frontend-React-cyan)
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## What It Does
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Instead of manually filtering spreadsheets, you ask questions in plain English:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- *"Who has the best dribbling?"*
+- *"Find me a creative midfielder who can press hard"*
+- *"Top 5 players by finishing"*
+- *"Best goalkeepers by reflexes"*
 
-### `npm test`
+The system intelligently routes each query to the right engine and returns a grounded answer.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Architecture
+```
+User Query
+    ↓
+LLM Classifier (Groq)
+    ↓
+STAT query          SEMANTIC query
+    ↓                     ↓
+Pandas nlargest     RAG Pipeline
+    ↓                     ↓
+Top 5 players       ChromaDB retrieval
+                          ↓
+                    Llama 3.3 70B
+                          ↓
+                    Grounded answer
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+**The key engineering decision:** RAG alone fails for stat-based queries like "who has the highest dribbling" because vector similarity doesn't compare numerical values. The hybrid router solves this by detecting query intent first and using the right tool for each query type.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Tech Stack
 
-### `npm run eject`
+| Layer | Technology |
+|---|---|
+| LLM | Llama 3.3 70B via Groq |
+| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
+| Vector DB | ChromaDB |
+| Backend | Flask + Python |
+| Frontend | React |
+| Dataset | FIFA 24 — 5,682 players, 41 attributes |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Known Limitations
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- **Named entity queries** like "Messi vs Ronaldo" don't work reliably — vector search retrieves semantically similar chunks rather than specific named players. Fix: add a third route that extracts player names and fetches them directly from the dataframe.
+- **Vocabulary mismatch** — querying "PSG" won't match "Paris Saint-Germain" in the embeddings. Fix: abbreviation expansion at preprocessing time.
+- **ChromaDB is local only** — not suitable for production scale. Would be replaced with Qdrant or Pinecone for deployment.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## Setup
+```bash
+# 1. Clone the repo
+git clone https://github.com/BhargavaAtharva/football-scout-ai
+cd football-scout-ai
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# 2. Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# 3. Install dependencies
+pip install -r requirements.txt
 
-### Code Splitting
+# 4. Set your Groq API key
+export GROQ_API_KEY="your-key-here"
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+# 5. Run the backend
+python api.py
 
-### Analyzing the Bundle Size
+# 6. In a new terminal, run the frontend
+cd frontend
+npm install
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Project Structure
+```
+football-scout-ai/
+├── scout.py          # Core RAG + hybrid query engine
+├── api.py            # Flask REST API
+├── player_stats.csv  # FIFA 24 dataset
+└── frontend/
+    └── src/
+        └── App.js    # React chat interface
+```
