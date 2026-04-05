@@ -61,6 +61,17 @@ Top 5 players       ChromaDB retrieval
 
 ---
 
+## Evaluation (RAGAS)
+| Metric | Score |
+|---|---|
+| Faithfulness | 1.00 |
+| Answer Relevancy | 0.37 |
+| Context Recall | 0.75 |
+
+Answer relevancy is lower due to terse single-word answers. 
+Context recall failure on stat-based queries is expected — 
+these are routed to pandas in production use.
+
 ## Setup
 ```bash
 # 1. Clone the repo
